@@ -10,5 +10,12 @@
   - [x] Add levels option
 - Config
 - CICD: fmt, lint, tests, deploy?
+  - [x] lint
+  - [x] fmt
+  - [x] build
+  - [x] test
+  - [x] docker build
+  - [ ] docker test
+  - [ ] deploy
 - Improve test/ functional test
 - k8s?
