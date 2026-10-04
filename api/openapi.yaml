@@ -1,0 +1,184 @@
+openapi: "3.0.3"
+
+info:
+  title: Fizzbuzz API
+  description: |
+    Generates customizable FizzBuzz sequences and reports the most frequent request.
+  version: "1.0.0"
+  license:
+    name: MIT
+
+# No authentication: every endpoint is public.
+security: []
+
+paths:
+  /fizzbuzz:
+    post:
+      summary: Generate a FizzBuzz sequence
+      description: |
+        Returns the numbers from 1 to `limit`, where multiples of `int1` are replaced by `str1`,
+        multiples of `int2` by `str2`, and multiples of both by `str1` + `str2`.
+      operationId: generateFizzbuzz
+      tags: [fizzbuzz]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FizzbuzzParams"
+      responses:
+        "200":
+          description: The generated sequence.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: string
+                    example: ["1", "2", "fizz", "4", "buzz", "fizz", "7", "8", "fizz", "buzz", "11", "fizz", "13", "14", "fizzbuzz"]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /fizzbuzz/statistics:
+    get:
+      summary: Get the most frequent request
+      description: |
+        Returns the parameters of the most frequent `POST /fizzbuzz` request and how many times it was made.
+        Two requests are the same when all five parameters are equal.
+        If no request has been made yet, `params` is `null` and `hits` is `0`.
+        If several requests share the highest count, any one of them may be returned.
+      operationId: getStatistics
+      tags: [fizzbuzz]
+      responses:
+        "200":
+          description: The most frequent request.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Statistics"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      tags: [infra]
+      responses:
+        "200":
+          description: The service is up.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+components:
+  schemas:
+    FizzbuzzParams:
+      type: object
+      required: [int1, int2, limit, str1, str2]
+      additionalProperties: false
+      properties:
+        int1:
+          type: integer
+          minimum: 1
+          description: Multiples of this number are replaced by `str1`.
+          example: 3
+        int2:
+          type: integer
+          minimum: 1
+          description: Multiples of this number are replaced by `str2`.
+          example: 5
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          description: Length of the sequence. The maximum is configurable with `MAX_LIMIT`.
+          example: 15
+        str1:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Replaces multiples of `int1`. The maximum length is configurable with `MAX_STR_LENGHT`.
+          example: fizz
+        str2:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Replaces multiples of `int2`. The maximum length is configurable with `MAX_STR_LENGHT`.
+          example: buzz
+
+    Statistics:
+      type: object
+      required: [params, hits]
+      properties:
+        params:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/FizzbuzzParams"
+          nullable: true
+        hits:
+          type: integer
+          minimum: 0
+          description: Number of times this exact request was made.
+          example: 42
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [bad_request, invalid_params, internal]
+              description: |
+                - `bad_request`: the body is not valid JSON, has an unknown field, or a field has the wrong type.
+                - `invalid_params`: the JSON is valid but a value is out of range.
+                - `internal`: unexpected server error.
+            message:
+              type: string
+
+  responses:
+    BadRequest:
+      description: The body could not be decoded, or a parameter is out of range.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            malformedBody:
+              summary: Invalid JSON, unknown field or wrong type
+              value:
+                error:
+                  code: bad_request
+                  message: invalid JSON body
+            outOfRange:
+              summary: A value breaks a limit
+              value:
+                error:
+                  code: invalid_params
+                  message: "invalid fizzbuzz params: int1 and int2 must be greater than 0"
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: internal
+              message: internal error
