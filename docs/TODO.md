@@ -1,8 +1,12 @@
 # TODO
 
-- README: +docs architecture/limitations/ questrions
+- README
+- Doc: OpenAPI architecture/limitations/questions/assumptions
 - Dockerize / compose?
+  - [ ] Dockerfile
+  - [ ] DockerCompose
 - Logging
-- CDCI: fmt, lint, tests, deploy?
+- Config
+- CICD: fmt, lint, tests, deploy?
 - Improve test/ functional test
 - k8s?

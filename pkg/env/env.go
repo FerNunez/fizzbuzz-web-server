@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+// GetString retrieves string assicuated to env variable given by key. Returns default value if not found
 func GetString(key, fallback string) string {
 	val, ok := os.LookupEnv(key)
 	if !ok {
@@ -13,6 +14,7 @@ func GetString(key, fallback string) string {
 	return val
 }
 
+// GetString retrieves the int value associated to env variable given by key. Returns default value if not found or not int
 func GetInt(key string, fallback int) int {
 	val, ok := os.LookupEnv(key)
 	if !ok {
@@ -25,6 +27,7 @@ func GetInt(key string, fallback int) int {
 	return valAsInt
 }
 
+// GetString retrieves the bool value associated to env variable given by key. Returns default value if not found or not bool
 func GetBool(key string, fallback bool) bool {
 	val, ok := os.LookupEnv(key)
 	if !ok {
