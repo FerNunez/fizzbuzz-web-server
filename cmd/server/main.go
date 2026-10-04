@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,12 +15,30 @@ import (
 	"fizzbuzz-web-server/pkg/env"
 )
 
-var httpAddr = env.GetString("HTTP_ADDR", ":8081")
+var (
+	httpAddr = env.GetString("HTTP_ADDR", ":8081")
+	logLevel = env.GetString("LOG_LEVEL", "INFO")
+)
+
+func newLogger(level string) *slog.Logger {
+	var slogLevel slog.Level
+	err := slogLevel.UnmarshalText([]byte(level))
+	if err != nil {
+		slogLevel = slog.LevelInfo
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slogLevel}))
+
+	if err != nil {
+		logger.Warn("wrong configured logger level, defaulting to: INFO", "cfg_logger", level)
+	}
+	return logger
+}
 
 func main() {
+	logger := newLogger(logLevel)
 	repo := repository.NewInmemoryRepository()
 	svc := service.NewService(repo)
-	handler := handler.NewFizzbuzzHandler(svc)
+	handler := handler.NewFizzbuzzHandler(svc, logger)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -36,24 +54,28 @@ func main() {
 		Handler: mux,
 	}
 
+	// Launch server and listen for errors
 	serverErrs := make(chan error, 1)
 	go func() {
-		log.Printf("fizzbuzz server listening on %s", httpAddr)
+		logger.Info("fizzbuzz server listening", "address", httpAddr)
 		serverErrs <- server.ListenAndServe()
 	}()
 
+	// Listen to shutdoiwn signal
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case err := <-serverErrs:
-		log.Printf("Server error: %v", err)
+		logger.Error("Server error, exiting..", "err", err)
+		os.Exit(1)
 	case sig := <-shutdown:
-		log.Printf("Received %v, shutting down...", sig)
-		shutdownCtx, sshutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer sshutdownCancel()
+		logger.Info("Received signal to shutting down", "signal", sig)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
+			logger.Error("couln't shutdown gracefully, force closing server", "err", err)
 			server.Close()
 		}
+		logger.Info("server closed")
 	}
 }
