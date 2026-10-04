@@ -8,7 +8,8 @@ import (
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(APIResponse{
+	// TODO: maybe fix this. If data is something that can't be decoded => Error
+	_ = json.NewEncoder(w).Encode(APIResponse{
 		Data:  data,
 		Error: nil,
 	})
@@ -17,8 +18,10 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(APIError{
-		Code:    code,
-		Message: message,
+	_ = json.NewEncoder(w).Encode(APIResponse{
+		Error: &APIError{
+			Code:    code,
+			Message: message,
+		},
 	})
 }

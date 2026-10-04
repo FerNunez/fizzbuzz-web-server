@@ -43,7 +43,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	mux.HandleFunc("POST /fizzbuzz", handler.HandleFizzbuzz)
@@ -74,7 +74,9 @@ func main() {
 		defer shutdownCancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("couln't shutdown gracefully, force closing server", "err", err)
-			server.Close()
+			if err := server.Close(); err != nil {
+				logger.Error("force close failed", "err", err)
+			}
 		}
 		logger.Info("server closed")
 	}

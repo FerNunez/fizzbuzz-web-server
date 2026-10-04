@@ -46,13 +46,6 @@ func TestGenerateFizzbuzz(t *testing.T) {
 	}
 }
 
-func compareFizzbuzzParams(p1, p2 *FizzbuzzParams) bool {
-	if p1 == nil && p2 != nil || p1 != nil && p2 == nil {
-		return false
-	}
-	return p1.Int1 == p2.Int1 && p1.Int2 == p2.Int2 && p1.Limit == p2.Limit && p1.Str1 == p2.Str1 && p1.Str2 == p2.Str2
-}
-
 func TestValidateFizzbuzzParams(t *testing.T) {
 	tests := []struct {
 		name         string

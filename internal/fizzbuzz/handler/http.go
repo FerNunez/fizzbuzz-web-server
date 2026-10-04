@@ -25,7 +25,7 @@ func (h *FizzbuzzHandler) HandleFizzbuzz(w http.ResponseWriter, r *http.Request)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 
-	var req RequestParams
+	var req fizzbuzzRequestParams
 	if err := decoder.Decode(&req); err != nil {
 		h.logger.Debug("error while decoding RequestParams", "err", err)
 		writeError(w, http.StatusBadRequest, codeBadRequest, "invalid JSON body")
@@ -54,17 +54,21 @@ func (h *FizzbuzzHandler) HandleFizzbuzz(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *FizzbuzzHandler) HandleStatistics(w http.ResponseWriter, r *http.Request) {
+	// TODO: add any params give error?
 	paramStats, err := h.service.GetMostFrequent(r.Context())
 
 	// TODO: This feels weird, service sending ERROR but http handler returns OK
 	// Maybe better if the systems return new paramStats
 	if errors.Is(err, domain.ErrEmptyRepo) {
 		h.logger.Debug("got asked most frequent but repo is empty")
-		writeJSON(w, http.StatusOK, domain.ParamStat{})
+		writeJSON(w, http.StatusOK, statisticsResponse{})
 	} else if err != nil {
 		h.logger.Error("internal server error", "err", err)
 		writeError(w, http.StatusInternalServerError, codeInternal, "internal error")
 	} else {
-		writeJSON(w, http.StatusOK, paramStats)
+		writeJSON(w, http.StatusOK, statisticsResponse{
+			Params: toRequestParams(paramStats.Params),
+			Hits:   paramStats.Hits,
+		})
 	}
 }
