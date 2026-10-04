@@ -24,11 +24,9 @@ func (h *FizzbuzzHandler) HandleFizzbuzz(w http.ResponseWriter, r *http.Request)
 
 	var req RequestParams
 	if err := decoder.Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("wrong request"))
+		writeError(w, http.StatusBadRequest, codeBadRequest, "invalid JSON body")
 		return
 	}
-	r.Body.Close()
 
 	fizzbuzzed, err := h.serivce.Generate(r.Context(), &domain.FizzbuzzParams{
 		Int1:  req.Int1,
@@ -39,31 +37,25 @@ func (h *FizzbuzzHandler) HandleFizzbuzz(w http.ResponseWriter, r *http.Request)
 	})
 
 	if errors.Is(err, domain.ErrInvalidParams) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		writeError(w, http.StatusBadRequest, codeInvalidParams, err.Error())
 	} else if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("could not process request"))
+		writeError(w, http.StatusInternalServerError, codeInternal, "internal error")
 	} else {
-		w.Header().Set("content-type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(APIResponse{Data: fizzbuzzed})
+		// TODO: Returns OK or created. To verify
+		writeJSON(w, http.StatusOK, fizzbuzzed)
 	}
 }
 
 func (h *FizzbuzzHandler) HandleStatistics(w http.ResponseWriter, r *http.Request) {
 	paramStats, err := h.serivce.GetMostFrequent(r.Context())
 
+	// TODO: This feels weird, service sending ERROR but http handler returns OK
+	// Maybe better if the systems return new paramStats
 	if errors.Is(err, domain.ErrEmptyRepo) {
-		w.Header().Set("content-type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(APIResponse{Data: domain.ParamStat{}})
+		writeJSON(w, http.StatusOK, domain.ParamStat{})
 	} else if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("could not process request"))
+		writeError(w, http.StatusInternalServerError, codeInternal, "internal error")
 	} else {
-		w.Header().Set("content-type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(APIResponse{Data: paramStats})
+		writeJSON(w, http.StatusOK, paramStats)
 	}
 }
