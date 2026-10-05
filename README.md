@@ -11,7 +11,7 @@ A small Go HTTP service that generates customizable FizzBuzz sequences. It also 
 Given `int1`, `int2`, `limit`, `str1` and `str2`, it returns the numbers from 1 to `limit`, where:
 - multiples of `int1` are replaced by `str1`
 - multiples of `int2` are replaced by `str2`
-- multiples of both are replaced by `str1` + `str2`
+- multiples of both are replaced by `str1str2`
 
 ## Features
 
@@ -28,6 +28,8 @@ Given `int1`, `int2`, `limit`, `str1` and `str2`, it returns the numbers from 1 
 
 **Requirements:** Go 1.27+ or Docker.
 
+You can run the code locally with go installed, or using docker.
+
 ### Local
 
 ```bash
@@ -40,19 +42,23 @@ go run ./cmd/server
 ```bash
 docker build -t fizzbuzz-web-server .
 docker run --rm -p 8081:8081 fizzbuzz-web-server
-```
-
-Settings are passed as environment variables (see [Configuration](#configuration)). If you change `HTTP_ADDR`, map the matching port:
-
-```bash
-docker run --rm -p 9000:9000 -e HTTP_ADDR=:9000 -e LOG_LEVEL=DEBUG fizzbuzz-web-server
+# fizzbuzz server runs inside docker listening address:8081
 ```
 
 Then check it is up:
 
 ```bash
 curl -s localhost:8081/health
-# ok
+# returns ok
+```
+
+ or generate a fizzbuzz:
+
+``` bash
+curl -s -X POST localhost:8081/fizzbuzz \
+  -H 'Content-Type: application/json' \
+  -d '{"int1":3,"int2":5,"limit":15,"str1":"fizz","str2":"buzz"}'
+# returns {"data":["1","2","fizz","4","buzz","fizz","7","8","fizz","buzz","11","fizz","13","14","fizzbuzz"]}
 ```
 
 ## Configuration
@@ -68,6 +74,9 @@ All settings are environment variables with defaults. An invalid value (for exam
 
 ```bash
 LOG_LEVEL=DEBUG HTTP_ADDR=:9000 go run ./cmd/server
+# or 
+docker run --rm -p 9000:9000 -e HTTP_ADDR=:9000 -e LOG_LEVEL=DEBUG fizzbuzz-web-server
+
 ```
 
 ## API
@@ -180,12 +189,6 @@ CI runs the same checks on every push and pull request on main (see [`.github/wo
 The layout follows the official Go guide [Organizing a Go module](https://go.dev/doc/modules/layout): commands under `cmd/`, private packages under `internal/`.
 
 Code tries to be maintainable and easy to understand. If you want to know more in detail about the architecture, patterns, please check: [`docs/architecture.md`](docs/architecture.md)
-
-## Contributions
-
-To contribute to this project, see [`docs/project_evolution.md`](docs/project_evolution.md).
-
-There you will find our desired way to extend the service, new repositories, events and queues, cloud providers, etc.
 
 ## Next Steps
 

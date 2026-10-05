@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,14 +22,28 @@ import (
 // shutdownTimeout bounds the graceful drain.
 const shutdownTimeout = 10 * time.Second
 
-func main() {
+// newRouter wires the HTTP routes. extracted as a function for easier testeability
+func newRouter(h *handler.FizzbuzzHandler) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("POST /fizzbuzz", h.HandleFizzbuzz)
+	mux.HandleFunc("GET /fizzbuzz/statistics", h.HandleStatistics)
+	return mux
+}
+
+// main run function that creates an listen a server
+func run(ctx context.Context, stdout io.Writer) error {
+	// config
 	cfg, err := config.Load()
 	if err != nil {
-		slog.Error("invalid configuration", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	// logger
+	logger := slog.New(slog.NewTextHandler(stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	logger.Info("configuration loaded",
 		"http_addr", cfg.HTTPAddr,
 		"log_level", cfg.LogLevel,
@@ -34,21 +51,14 @@ func main() {
 		"max_str_length", cfg.MaxStrLength,
 	)
 
+	// repo -> service -> handler
 	repo := repository.NewInmemoryRepository()
 	svc := service.NewService(repo, domain.Limits{
 		MaxLimit:     cfg.MaxLimit,
 		MaxStrLength: cfg.MaxStrLength,
 	})
-	handler := handler.NewFizzbuzzHandler(svc, logger)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-
-	mux.HandleFunc("POST /fizzbuzz", handler.HandleFizzbuzz)
-	mux.HandleFunc("GET /fizzbuzz/statistics", handler.HandleStatistics)
+	fizzbuzzHandler := handler.NewFizzbuzzHandler(svc, logger)
+	mux := newRouter(fizzbuzzHandler)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -56,30 +66,41 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	// Launch server and listen for errors
+	// Launch server and listen for errors in channel.
+	// ErrServerClosed is the expected result of Shutdown, not a failure.
 	serverErrs := make(chan error, 1)
 	go func() {
 		logger.Info("fizzbuzz server listening", "address", cfg.HTTPAddr)
-		serverErrs <- server.ListenAndServe()
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrs <- err
+		}
+		close(serverErrs)
 	}()
 
-	// Listen to shutdoiwn signal
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 	select {
 	case err := <-serverErrs:
-		logger.Error("Server error, exiting..", "err", err)
+		return fmt.Errorf("server error: %w", err)
+	case <-ctx.Done():
+		logger.Info("shutdown signal received")
+	}
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer shutdownCancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		closeErr := server.Close()
+		return fmt.Errorf("graceful shutdown failed, server force closed: %w", errors.Join(err, closeErr))
+	}
+	logger.Info("server closed")
+	return nil
+}
+
+// main entrypoint
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := run(ctx, os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
-	case sig := <-shutdown:
-		logger.Info("Received signal to shutting down", "signal", sig)
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer shutdownCancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("couln't shutdown gracefully, force closing server", "err", err)
-			if err := server.Close(); err != nil {
-				logger.Error("force close failed", "err", err)
-			}
-		}
-		logger.Info("server closed")
 	}
 }
