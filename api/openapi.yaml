@@ -110,13 +110,13 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-          description: Replaces multiples of `int1`. The maximum length is configurable with `MAX_STR_LENGHT`.
+          description: Replaces multiples of `int1`. The maximum length is configurable with `MAX_STR_LENGTH`.
           example: fizz
         str2:
           type: string
           minLength: 1
           maxLength: 100
-          description: Replaces multiples of `int2`. The maximum length is configurable with `MAX_STR_LENGHT`.
+          description: Replaces multiples of `int2`. The maximum length is configurable with `MAX_STR_LENGTH`.
           example: buzz
 
     Statistics:
