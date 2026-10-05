@@ -1,7 +1,7 @@
 # TODO
 
 - README
-  - [ ]architecture/limitations/questions/assumptions 
+  - [x] architecture/limitations/questions/assumptions 
 - Doc:
   - [x] OpenAPI 
 - Dockerize / compose?
