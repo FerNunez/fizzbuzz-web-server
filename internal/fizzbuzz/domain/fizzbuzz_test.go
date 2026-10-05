@@ -83,7 +83,33 @@ func TestValidateFizzbuzzParams(t *testing.T) {
 			str2:         "buzz",
 			expectsError: true,
 		},
-		// TODO: add test over the limits / big str?
+		{
+			name:         "limit at max",
+			int1:         3,
+			int2:         5,
+			limit:        100,
+			str1:         "fizz",
+			str2:         "buzz",
+			expectsError: false,
+		},
+		{
+			name:         "limit over max",
+			int1:         3,
+			int2:         5,
+			limit:        101,
+			str1:         "fizz",
+			str2:         "buzz",
+			expectsError: true,
+		},
+		{
+			name:         "string over max length",
+			int1:         3,
+			int2:         5,
+			limit:        16,
+			str1:         "fizzfizzfiz",
+			str2:         "buzz",
+			expectsError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -96,7 +122,7 @@ func TestValidateFizzbuzzParams(t *testing.T) {
 				Str2:  tt.str2,
 			}
 
-			err := fizzbuzzParams.Validate()
+			err := fizzbuzzParams.Validate(Limits{MaxLimit: 100, MaxStrLength: 10})
 			if tt.expectsError && err == nil {
 				t.Fatalf("expects error in test: %v but got no error", tt.name)
 			} else if !tt.expectsError && err != nil {

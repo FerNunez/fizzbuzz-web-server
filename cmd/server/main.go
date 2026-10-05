@@ -9,35 +9,36 @@ import (
 	"syscall"
 	"time"
 
+	"fizzbuzz-web-server/internal/config"
+	"fizzbuzz-web-server/internal/fizzbuzz/domain"
 	"fizzbuzz-web-server/internal/fizzbuzz/handler"
 	"fizzbuzz-web-server/internal/fizzbuzz/infrastructure/repository"
 	"fizzbuzz-web-server/internal/fizzbuzz/service"
-	"fizzbuzz-web-server/pkg/env"
 )
 
-var (
-	httpAddr = env.GetString("HTTP_ADDR", ":8081")
-	logLevel = env.GetString("LOG_LEVEL", "INFO")
-)
-
-func newLogger(level string) *slog.Logger {
-	var slogLevel slog.Level
-	err := slogLevel.UnmarshalText([]byte(level))
-	if err != nil {
-		slogLevel = slog.LevelInfo
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slogLevel}))
-
-	if err != nil {
-		logger.Warn("wrong configured logger level, defaulting to: INFO", "cfg_logger", level)
-	}
-	return logger
-}
+// shutdownTimeout bounds the graceful drain.
+const shutdownTimeout = 10 * time.Second
 
 func main() {
-	logger := newLogger(logLevel)
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("invalid configuration", "err", err)
+		os.Exit(1)
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	logger.Info("configuration loaded",
+		"http_addr", cfg.HTTPAddr,
+		"log_level", cfg.LogLevel,
+		"max_limit", cfg.MaxLimit,
+		"max_str_length", cfg.MaxStrLength,
+	)
+
 	repo := repository.NewInmemoryRepository()
-	svc := service.NewService(repo)
+	svc := service.NewService(repo, domain.Limits{
+		MaxLimit:     cfg.MaxLimit,
+		MaxStrLength: cfg.MaxStrLength,
+	})
 	handler := handler.NewFizzbuzzHandler(svc, logger)
 
 	mux := http.NewServeMux()
@@ -50,14 +51,15 @@ func main() {
 	mux.HandleFunc("GET /fizzbuzz/statistics", handler.HandleStatistics)
 
 	server := &http.Server{
-		Addr:    httpAddr,
-		Handler: mux,
+		Addr:              cfg.HTTPAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	// Launch server and listen for errors
 	serverErrs := make(chan error, 1)
 	go func() {
-		logger.Info("fizzbuzz server listening", "address", httpAddr)
+		logger.Info("fizzbuzz server listening", "address", cfg.HTTPAddr)
 		serverErrs <- server.ListenAndServe()
 	}()
 
@@ -70,7 +72,7 @@ func main() {
 		os.Exit(1)
 	case sig := <-shutdown:
 		logger.Info("Received signal to shutting down", "signal", sig)
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer shutdownCancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("couln't shutdown gracefully, force closing server", "err", err)

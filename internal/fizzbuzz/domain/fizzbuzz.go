@@ -4,13 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-
-	"fizzbuzz-web-server/pkg/env"
-)
-
-var (
-	MaxLimit     = env.GetInt("MAX_LIMIT", 10000)
-	MaxStrLenght = env.GetInt("MAX_STR_LENGHT", 100)
 )
 
 var (
@@ -23,6 +16,12 @@ type ParamStat struct {
 	Hits   int
 }
 
+// Limits are the upper bounds accepted by FizzbuzzParams.Validate.
+type Limits struct {
+	MaxLimit     int
+	MaxStrLength int
+}
+
 type FizzbuzzParams struct {
 	Int1  int
 	Int2  int
@@ -31,16 +30,16 @@ type FizzbuzzParams struct {
 	Str2  string
 }
 
-// Validate checks if the params are in the desired thesholds
-func (p FizzbuzzParams) Validate() error {
-	if p.Int1 <= 0 || p.Int2 <= 0 || p.Limit <= 0 {
+// Validate checks if the params are within the given limits
+func (p FizzbuzzParams) Validate(l Limits) error {
+	if p.Int1 <= 0 || p.Int2 <= 0 {
 		return fmt.Errorf("%w: int1 and int2 must be greater than 0", ErrInvalidParams)
 	}
-	if p.Limit <= 0 || p.Limit > MaxLimit {
-		return fmt.Errorf("%w: integers must be in between 1..%d", ErrInvalidParams, MaxLimit)
+	if p.Limit <= 0 || p.Limit > l.MaxLimit {
+		return fmt.Errorf("%w: limit must be in between 1..%d", ErrInvalidParams, l.MaxLimit)
 	}
-	if len(p.Str1) <= 0 || len(p.Str1) > MaxStrLenght || len(p.Str2) <= 0 || len(p.Str2) > MaxStrLenght {
-		return fmt.Errorf("%w: strings cannot be null or lenghtier than %d chatacters", ErrInvalidParams, MaxStrLenght)
+	if len(p.Str1) == 0 || len(p.Str1) > l.MaxStrLength || len(p.Str2) == 0 || len(p.Str2) > l.MaxStrLength {
+		return fmt.Errorf("%w: strings must be 1..%d characters long", ErrInvalidParams, l.MaxStrLength)
 	}
 	return nil
 }

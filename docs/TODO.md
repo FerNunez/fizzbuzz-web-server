@@ -1,14 +1,17 @@
 # TODO
 
 - README
-- Doc: OpenAPI architecture/limitations/questions/assumptions
+  - [ ]architecture/limitations/questions/assumptions 
+- Doc:
+  - [x] OpenAPI 
 - Dockerize / compose?
   - [x] Dockerfile
   - [ ] DockerCompose
 - Logging
   - [x] Slog
   - [x] Add levels option
-- Config
+- Config:
+  - [x] Config loaded and passed to service
 - CICD: fmt, lint, tests, deploy?
   - [x] lint
   - [x] fmt

@@ -24,4 +24,3 @@ USER app
 
 EXPOSE 8081
 ENTRYPOINT ["./server"]
-# TODO: add CMD for params? PORT, Max values?

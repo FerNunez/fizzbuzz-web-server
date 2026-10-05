@@ -8,15 +8,16 @@ import (
 )
 
 type Service struct {
-	repo domain.FizzbuzzRepository
+	repo   domain.FizzbuzzRepository
+	limits domain.Limits
 }
 
-func NewService(repo domain.FizzbuzzRepository) *Service {
-	return &Service{repo}
+func NewService(repo domain.FizzbuzzRepository, limits domain.Limits) *Service {
+	return &Service{repo: repo, limits: limits}
 }
 
 func (s *Service) Generate(ctx context.Context, params *domain.FizzbuzzParams) ([]string, error) {
-	if err := params.Validate(); err != nil {
+	if err := params.Validate(s.limits); err != nil {
 		return nil, err
 	}
 
