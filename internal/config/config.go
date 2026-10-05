@@ -38,12 +38,6 @@ func Load() (Config, error) {
 	if cfg.MaxStrLength <= 0 {
 		l.errorf("MAX_STR_LENGTH must be greater than 0, got %d", cfg.MaxStrLength)
 	}
-	if cfg.MaxLimit <= 0 {
-		l.errorf("MAX_LIMIT must be greater than 0, got %d", cfg.MaxLimit)
-	}
-	if cfg.MaxStrLength <= 0 {
-		l.errorf("MAX_STR_LENGTH must be greater than 0, got %d", cfg.MaxStrLength)
-	}
 
 	return cfg, errors.Join(l.errs...)
 }
