@@ -8,9 +8,10 @@ import (
 
 var (
 	ErrInvalidParams = errors.New("invalid fizzbuzz params")
-	ErrEmptyRepo     = errors.New("empty repository")
 )
 
+// ParamStat is the most frequent request and its hit count.
+// The zero value (nil Params, 0 Hits) means no request was recorded yet.
 type ParamStat struct {
 	Params *FizzbuzzParams
 	Hits   int

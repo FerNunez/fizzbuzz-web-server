@@ -25,7 +25,7 @@ func (r *InmemoryRepository) AddRequest(_ctx context.Context, params *domain.Fiz
 	defer r.mutex.Unlock()
 
 	if params == nil {
-		return fmt.Errorf("%w: params cannot be nil", domain.ErrEmptyRepo)
+		return fmt.Errorf("%w: params cannot be nil", domain.ErrInvalidParams)
 	}
 
 	r.Requests[*params] += 1
@@ -35,10 +35,6 @@ func (r *InmemoryRepository) AddRequest(_ctx context.Context, params *domain.Fiz
 func (r *InmemoryRepository) GetMostFrequent(_ctx context.Context) (*domain.ParamStat, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-
-	if len(r.Requests) == 0 {
-		return nil, domain.ErrEmptyRepo
-	}
 
 	var mostFrequent domain.ParamStat
 	for key, count := range r.Requests {

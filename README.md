@@ -159,6 +159,7 @@ CI runs the same checks on every push and pull request on main (see [`.github/wo
 - Only valid requests are counted in the statistics.
 - When several requests share the highest count, any one of them may be returned.
 - Statistics do not need to survive a restart.
+- Unknown query parameters on `GET` endpoints are ignored.
 
 ## Architecture & Project Layout
 
