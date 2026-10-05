@@ -28,13 +28,13 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Check dependencies diff
-        run: go mod tidy -diff
+        run: make tidy
       - name: Check formatting
-        run: test -z "$(gofmt -l .)"
+        run: make fmt
       - name: Go vet
-        run: go vet ./...
+        run: make vet
       - name: Build
-        run: go build ./...
+        run: make build
 
   test: 
     runs-on: ubuntu-latest
@@ -44,7 +44,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Test
-        run: go test -race ./...
+        run: make race
     
   docker:
     runs-on: ubuntu-latest
