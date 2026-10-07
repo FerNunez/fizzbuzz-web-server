@@ -52,4 +52,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build Docker image
-        run: docker build -t fizzbuzz-web-server:ci -f Dockerfile .
+        run: docker build -t fizzbuzz-web-server:ci .
+      - name: Smoke test /health
+        run: |
+          docker run -d --name app -p 8081:8081 fizzbuzz-web-server:ci
+          curl -fsS --retry 10 --retry-delay 1 --retry-connrefused localhost:8081/health
+      - name: Logs on failure
+        if: failure()
+        run: docker logs app
